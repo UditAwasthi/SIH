@@ -1,0 +1,21 @@
+{
+  "name": "pgrkam-ai",
+  "private": true,
+  "version": "0.1.0",
+  "workspaces": [
+    "frontend",
+    "backend",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev:frontend": "npm run dev --workspace=@pgrkam-ai/frontend",
+    "dev:backend": "npm run start:dev --workspace=@pgrkam-ai/backend",
+    "build": "npm run build --workspaces --if-present",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "prisma:validate": "npm run prisma:validate --workspace=@pgrkam-ai/backend"
+  },
+  "engines": {
+    "node": ">=20.9.0",
+    "npm": ">=10"
+  }
+}
