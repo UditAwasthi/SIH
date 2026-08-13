@@ -12,6 +12,7 @@ export interface KnowledgeChunk {
 }
 
 const RETRIEVAL_SCORE_THRESHOLD = 0.35;
+const TEXT_HIT_THRESHOLD = 0.34;
 
 @Injectable()
 export class KnowledgeService {
@@ -23,6 +24,8 @@ export class KnowledgeService {
   ) {}
 
   async retrieve(question: string, limit = 5): Promise<KnowledgeChunk[]> {
+    const textHits = await this.textSearch(question, limit);
+
     try {
       const embedding = await this.ai.embed(question);
       const vector = `[${embedding.join(",")}]`;
@@ -42,29 +45,44 @@ export class KnowledgeService {
       this.logger.warn(`Vector retrieval unavailable, falling back to text search: ${String(error)}`);
     }
 
-    return this.textSearch(question, limit);
+    // Never return unrelated docs just to fill a quota — empty means "cannot verify".
+    return textHits.filter((hit) => (hit.score ?? 0) >= TEXT_HIT_THRESHOLD);
   }
 
   private async textSearch(question: string, limit: number): Promise<KnowledgeChunk[]> {
+    const stop = new Set([
+      "the",
+      "and",
+      "for",
+      "are",
+      "what",
+      "how",
+      "who",
+      "when",
+      "where",
+      "why",
+      "is",
+      "am",
+      "do",
+      "does",
+      "can",
+      "you",
+      "me",
+      "my",
+      "on",
+      "in",
+      "to",
+      "of",
+      "a",
+      "an",
+    ]);
     const terms = question
       .toLowerCase()
       .split(/[^a-z0-9\u0900-\u097F\u0A00-\u0A7F]+/i)
-      .filter((term) => term.length > 2)
+      .filter((term) => term.length > 2 && !stop.has(term))
       .slice(0, 6);
 
-    if (!terms.length) {
-      return this.prisma.document.findMany({
-        take: limit,
-        orderBy: { lastCrawledAt: "desc" },
-        select: {
-          content: true,
-          sourceUrl: true,
-          category: true,
-          language: true,
-          lastCrawledAt: true,
-        },
-      });
-    }
+    if (!terms.length) return [];
 
     const documents = await this.prisma.document.findMany({
       where: {
@@ -72,7 +90,7 @@ export class KnowledgeService {
           content: { contains: term, mode: "insensitive" as const },
         })),
       },
-      take: limit * 3,
+      take: limit * 4,
       orderBy: { lastCrawledAt: "desc" },
       select: {
         content: true,

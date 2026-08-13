@@ -34,8 +34,13 @@ export interface IntentResult {
 
 @Injectable()
 export class AiService {
-  private readonly apiKey = process.env.OPENAI_API_KEY;
-  private readonly model = process.env.OPENAI_MODEL ?? "gpt-4o-mini";
+  private get apiKey() {
+    return process.env.OPENAI_API_KEY?.trim() || undefined;
+  }
+
+  private get model() {
+    return process.env.OPENAI_MODEL?.trim() || "gpt-4o-mini";
+  }
 
   detectLanguage(input: string): SupportedLanguage {
     if (/[\u0A00-\u0A7F]/.test(input)) return "pa";
@@ -117,6 +122,45 @@ export class AiService {
       /\b(b\.?\s?tech|m\.?\s?tech|bca|mca|mba|ba|bcom|12th|graduate|diploma|iti)\b/i,
     );
 
+    const stop = new Set([
+      "a",
+      "an",
+      "the",
+      "for",
+      "me",
+      "my",
+      "in",
+      "on",
+      "at",
+      "to",
+      "of",
+      "and",
+      "or",
+      "find",
+      "show",
+      "get",
+      "please",
+      "want",
+      "looking",
+      "search",
+      "with",
+      "from",
+      "jobs",
+      "job",
+      "vacancy",
+      "vacancies",
+      "opening",
+      "openings",
+      "naukri",
+      "fresher",
+      "freshers",
+    ]);
+    const keywords = text
+      .split(/[^a-z0-9.+#\u0900-\u097F\u0A00-\u0A7F]+/i)
+      .map((part) => part.trim())
+      .filter((part) => part.length > 1 && !stop.has(part.toLowerCase()))
+      .slice(0, 6);
+
     return {
       intent,
       language: this.detectLanguage(input),
@@ -125,10 +169,7 @@ export class AiService {
         location: locationMatch?.[1],
         sector: sectorMatch?.[1],
         qualification: qualificationMatch?.[1],
-        keywords: text
-          .split(/\s+/)
-          .filter(Boolean)
-          .slice(0, 8),
+        keywords: keywords.length ? keywords : undefined,
       },
     };
   }
@@ -207,7 +248,7 @@ entities may include skills[], qualification, location, sector, keywords[], jobI
 
   async answer(question: string, context: string, language: SupportedLanguage): Promise<string> {
     const languageName = language === "hi" ? "Hindi" : language === "pa" ? "Punjabi" : "English";
-    if (!this.apiKey) {
+    const fallbackFromContext = () => {
       if (!context.trim()) {
         return language === "hi"
           ? "मैं इसे PGRKAM ज्ञान आधार से सत्यापित नहीं कर सका।"
@@ -218,40 +259,44 @@ entities may include skills[], qualification, location, sector, keywords[], jobI
       const snippet = context
         .split(/\n+/)
         .filter(Boolean)
-        .slice(0, 3)
-        .join(" ");
-      return `${snippet}\n\n(Source-backed excerpt; configure OPENAI_API_KEY for a fuller answer in ${languageName}.)`;
-    }
+        .slice(0, 4)
+        .join("\n");
+      return `${snippet}\n\n(Answer grounded in retrieved PGRKAM sources${this.apiKey ? "" : `; add a working OPENAI_API_KEY for fuller ${languageName} answers`}.)`;
+    };
 
-    const response = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${this.apiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: this.model,
-        temperature: 0.2,
-        messages: [
-          {
-            role: "system",
-            content: `You are the PGRKAM AI Career Assistant for Punjab employment and self-employment services.
+    if (!this.apiKey) return fallbackFromContext();
+
+    try {
+      const response = await fetch("https://api.openai.com/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${this.apiKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: this.model,
+          temperature: 0.2,
+          messages: [
+            {
+              role: "system",
+              content: `You are the PGRKAM AI Career Assistant for Punjab employment and self-employment services.
 Answer in ${languageName}.
 Use ONLY the supplied PGRKAM context. If the context is weak or missing, say you could not verify this from PGRKAM sources — never invent eligibility, money amounts, deadlines, or URLs.
 Cite source URLs when present in the context.`,
-          },
-          {
-            role: "user",
-            content: `Question: ${question}\n\nContext:\n${context || "(no retrieved context)"}`,
-          },
-        ],
-      }),
-    });
-    if (!response.ok) {
-      throw new ServiceUnavailableException("The AI response service is unavailable.");
+            },
+            {
+              role: "user",
+              content: `Question: ${question}\n\nContext:\n${context || "(no retrieved context)"}`,
+            },
+          ],
+        }),
+      });
+      if (!response.ok) return fallbackFromContext();
+      const body = (await response.json()) as { choices: Array<{ message: { content: string } }> };
+      return body.choices[0]?.message.content ?? fallbackFromContext();
+    } catch {
+      return fallbackFromContext();
     }
-    const body = (await response.json()) as { choices: Array<{ message: { content: string } }> };
-    return body.choices[0]?.message.content ?? "I couldn't verify this from the supplied sources.";
   }
 
   clarifyingQuestion(language: SupportedLanguage): string {

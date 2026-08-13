@@ -7,9 +7,14 @@ export class RedisService implements OnModuleDestroy {
   private client: Redis | undefined;
 
   private getClient(): Redis | undefined {
-    const redisUrl = process.env.REDIS_URL;
+    let redisUrl = process.env.REDIS_URL;
     if (!redisUrl) {
       return undefined;
+    }
+
+    // Upstash requires TLS; accept redis:// in .env and upgrade automatically.
+    if (redisUrl.includes("upstash.io") && redisUrl.startsWith("redis://")) {
+      redisUrl = redisUrl.replace(/^redis:\/\//, "rediss://");
     }
 
     if (!this.client) {
@@ -18,6 +23,7 @@ export class RedisService implements OnModuleDestroy {
         enableOfflineQueue: false,
         lazyConnect: true,
         maxRetriesPerRequest: 1,
+        tls: redisUrl.startsWith("rediss://") ? {} : undefined,
       });
       this.client.on("error", (error: Error) => {
         this.logger.debug(`Redis connection unavailable: ${error.message}`);

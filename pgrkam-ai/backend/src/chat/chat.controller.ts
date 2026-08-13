@@ -86,15 +86,13 @@ export class ChatController {
     } else if (intent.intent === "HELP") {
       content = this.ai.help(intent.language);
     } else if (intent.intent === "JOB_SEARCH" || intent.intent === "JOB_DETAILS") {
-      const keyword =
-        intent.entities.keywords?.join(" ") ||
-        intent.entities.skills?.join(" ") ||
-        undefined;
       jobs = await this.jobs.list({
         location: intent.entities.location,
         sector: intent.entities.sector,
         qualification: intent.entities.qualification,
-        q: keyword,
+        skills: intent.entities.skills,
+        keywords: intent.entities.keywords,
+        relax: true,
       });
       content = jobs.length
         ? intent.language === "hi"
@@ -122,9 +120,13 @@ export class ChatController {
             ? "ਨਿੱਜੀ ਸਿਫਾਰਸ਼ਾਂ ਲਈ ਪਹਿਲਾਂ ਆਪਣੀ ਪ੍ਰੋਫਾਈਲ ਭਰੋ।"
             : "Fill in your profile first to get personalized recommendations.";
     } else if (intent.intent === "SCHEME_SEARCH") {
-      const schemes = await this.schemes.list({
-        q: intent.entities.keywords?.join(" ") || intent.entities.sector,
+      let schemes = await this.schemes.list({
+        keywords: intent.entities.keywords,
+        q: body.content,
       });
+      if (!schemes.length) {
+        schemes = await this.schemes.list({});
+      }
       if (schemes.length) {
         content =
           intent.language === "hi"
@@ -162,19 +164,63 @@ export class ChatController {
             )
           : "I couldn't verify this from the PGRKAM knowledge base.";
       }
+    } else if (
+      intent.intent === "REGISTRATION" ||
+      intent.intent === "CAREER_GUIDANCE" ||
+      intent.intent === "VOCATIONAL_GUIDANCE" ||
+      intent.intent === "FAQ"
+    ) {
+      const preferredCategory =
+        intent.intent === "REGISTRATION"
+          ? "registration"
+          : intent.intent === "CAREER_GUIDANCE"
+            ? "career"
+            : intent.intent === "VOCATIONAL_GUIDANCE"
+              ? "vocational"
+              : undefined;
+      let chunks = await this.knowledge.retrieve(body.content);
+      if (preferredCategory) {
+        const categoryDocs = chunks.filter((chunk) => chunk.category === preferredCategory);
+        if (categoryDocs.length) chunks = categoryDocs;
+      }
+      sources = chunks.map((chunk) => ({
+        sourceUrl: chunk.sourceUrl,
+        lastCrawledAt: chunk.lastCrawledAt,
+      }));
+      if (!chunks.length) {
+        content =
+          intent.language === "hi"
+            ? "मैं इसे PGRKAM स्रोतों से सत्यापित नहीं कर सका।"
+            : intent.language === "pa"
+              ? "ਮੈਂ ਇਸ ਨੂੰ PGRKAM ਸਰੋਤਾਂ ਤੋਂ ਤਸਦੀਕ ਨਹੀਂ ਕਰ ਸਕਿਆ।"
+              : "I couldn't verify this from the PGRKAM knowledge base.";
+      } else {
+        content = await this.ai.answer(
+          body.content,
+          chunks.map((chunk) => `${chunk.content}\nSource: ${chunk.sourceUrl}`).join("\n\n"),
+          intent.language,
+        );
+      }
     } else {
       const chunks = await this.knowledge.retrieve(body.content);
       sources = chunks.map((chunk) => ({
         sourceUrl: chunk.sourceUrl,
         lastCrawledAt: chunk.lastCrawledAt,
       }));
-      content = chunks.length
-        ? await this.ai.answer(
-            body.content,
-            chunks.map((chunk) => `${chunk.content}\nSource: ${chunk.sourceUrl}`).join("\n\n"),
-            intent.language,
-          )
-        : "I couldn't verify this from the PGRKAM knowledge base.";
+      if (!chunks.length) {
+        content =
+          intent.language === "hi"
+            ? "मैं इसे PGRKAM स्रोतों से सत्यापित नहीं कर सका।"
+            : intent.language === "pa"
+              ? "ਮੈਂ ਇਸ ਨੂੰ PGRKAM ਸਰੋਤਾਂ ਤੋਂ ਤਸਦੀਕ ਨਹੀਂ ਕਰ ਸਕਿਆ।"
+              : "I couldn't verify this from the PGRKAM knowledge base.";
+      } else {
+        content = await this.ai.answer(
+          body.content,
+          chunks.map((chunk) => `${chunk.content}\nSource: ${chunk.sourceUrl}`).join("\n\n"),
+          intent.language,
+        );
+      }
     }
 
     const navigation = await this.navigation.forIntent(intent.intent);
