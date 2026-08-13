@@ -11,8 +11,9 @@ async function bootstrap() {
 
   const swaggerConfig = new DocumentBuilder()
     .setTitle("PGRKAM AI Career Assistant API")
-    .setDescription("Day 0 API foundation")
-    .setVersion("0.1.0")
+    .setDescription("PGRKAM AI Career Assistant API — chat, jobs, schemes, recommendations")
+    .setVersion("0.2.0")
+    .addBearerAuth()
     .build();
   const swaggerDocument = SwaggerModule.createDocument(app, swaggerConfig);
   SwaggerModule.setup("api/docs", app, swaggerDocument);

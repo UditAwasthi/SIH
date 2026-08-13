@@ -4,13 +4,46 @@
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
-    --primary: 222.2 47.4% 11.2%;
-    --primary-foreground: 210 40% 98%;
+    --background: 150 20% 96%;
+    --foreground: 162 42% 12%;
+    --muted: 150 12% 90%;
+    --muted-foreground: 162 12% 35%;
+    --brand: 162 55% 18%;
+    --brand-soft: 158 28% 88%;
+    --accent: 38 92% 48%;
+    --accent-foreground: 30 40% 10%;
+    --surface: 0 0% 100%;
+    --line: 150 14% 82%;
+    --danger: 0 72% 46%;
+  }
+
+  * {
+    @apply border-[hsl(var(--line))];
+  }
+
+  html {
+    scroll-behavior: smooth;
   }
 
   body {
-    @apply bg-background text-foreground;
+    @apply min-h-screen text-[hsl(var(--foreground))] antialiased;
+    background:
+      radial-gradient(1200px 600px at 10% -10%, hsl(158 40% 88% / 0.9), transparent 55%),
+      radial-gradient(900px 500px at 100% 0%, hsl(38 80% 88% / 0.45), transparent 50%),
+      linear-gradient(180deg, hsl(150 25% 97%), hsl(150 18% 93%));
+    font-family: var(--font-body), system-ui, sans-serif;
+  }
+
+  h1,
+  h2,
+  h3,
+  .font-display {
+    font-family: var(--font-display), system-ui, sans-serif;
+  }
+}
+
+@layer utilities {
+  .surface {
+    @apply rounded-2xl border bg-[hsl(var(--surface))] shadow-[0_12px_40px_-24px_rgba(15,61,46,0.45)];
   }
 }

@@ -12,7 +12,8 @@
     "dev:backend": "npm run start:dev --workspace=@pgrkam-ai/backend",
     "build": "npm run build --workspaces --if-present",
     "typecheck": "npm run typecheck --workspaces --if-present",
-    "prisma:validate": "npm run prisma:validate --workspace=@pgrkam-ai/backend"
+    "prisma:validate": "npm run prisma:validate --workspace=@pgrkam-ai/backend",
+    "prisma:seed": "npm run prisma:seed --workspace=@pgrkam-ai/backend"
   },
   "engines": {
     "node": ">=20.9.0",
