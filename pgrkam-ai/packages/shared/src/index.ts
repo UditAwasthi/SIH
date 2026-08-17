@@ -90,6 +90,7 @@ export interface ChatMessageResponse {
 
 export const EXAMPLE_PROMPTS = {
   en: [
+    "What can this app do?",
     "Find government jobs in Punjab for a B.Tech CSE fresher",
     "Am I eligible for unemployment allowance?",
     "How do I register on PGRKAM?",
@@ -97,6 +98,7 @@ export const EXAMPLE_PROMPTS = {
     "Jobs for me based on my profile",
   ],
   hi: [
+    "यह ऐप क्या कर सकता है?",
     "पंजाब में बी.टेक सीएसई फ्रेशर के लिए सरकारी नौकरियाँ खोजें",
     "क्या मैं बेरोजगारी भत्ते के लिए पात्र हूँ?",
     "PGRKAM पर पंजीकरण कैसे करें?",
@@ -104,6 +106,7 @@ export const EXAMPLE_PROMPTS = {
     "मेरी प्रोफ़ाइल के अनुसार नौकरियाँ",
   ],
   pa: [
+    "ਇਹ ਐਪ ਕੀ ਕਰ ਸਕਦਾ ਹੈ?",
     "ਪੰਜਾਬ ਵਿੱਚ ਬੀ.ਟੈਕ ਸੀਐਸਈ ਫਰੈਸ਼ਰ ਲਈ ਸਰਕਾਰੀ ਨੌਕਰੀਆਂ ਲੱਭੋ",
     "ਕੀ ਮੈਂ ਬੇਰੁਜ਼ਗਾਰੀ ਭੱਤੇ ਲਈ ਯੋਗ ਹਾਂ?",
     "PGRKAM ਤੇ ਰਜਿਸਟਰ ਕਿਵੇਂ ਕਰੀਏ?",

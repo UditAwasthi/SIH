@@ -3,7 +3,8 @@
 import { EXAMPLE_PROMPTS, type SupportedLanguage } from "@pgrkam-ai/shared";
 import { FormEvent, useEffect, useRef, useState } from "react";
 import { JobCard } from "@/components/job-card";
-import { ApiError, ChatResponse, Job, NavigationCta, Recommendation, api, ensureGuest } from "@/lib/api";
+import { ApiError, ChatResponse, Job, NavigationCta, Recommendation, api, ensureGuest, setStoredToken } from "@/lib/api";
+import { useTheme } from "@/theme";
 
 type ChatItem = {
   role: "user" | "assistant";
@@ -23,6 +24,7 @@ const languageLabel: Record<SupportedLanguage, string> = {
 };
 
 export function Chat({ initialPrompt }: { initialPrompt?: string }) {
+  const { classes: t } = useTheme();
   const [items, setItems] = useState<ChatItem[]>([]);
   const [value, setValue] = useState(initialPrompt ?? "");
   const [conversationId, setConversationId] = useState<string>();
@@ -51,10 +53,30 @@ export function Chat({ initialPrompt }: { initialPrompt?: string }) {
     setPending(true);
 
     try {
-      const response = await api<ChatResponse>("/chat/message", {
-        method: "POST",
-        body: JSON.stringify({ content, conversationId }),
-      });
+      await ensureGuest();
+      const post = (threadId?: string) =>
+        api<ChatResponse>("/chat/message", {
+          method: "POST",
+          body: JSON.stringify({ content, conversationId: threadId }),
+        });
+
+      let response: ChatResponse;
+      try {
+        response = await post(conversationId);
+      } catch (err) {
+        if (err instanceof ApiError && (err.status === 401 || err.status === 403)) {
+          setStoredToken(null);
+          await ensureGuest();
+          setConversationId(undefined);
+          response = await post(undefined);
+        } else if (err instanceof ApiError && err.status === 404) {
+          setConversationId(undefined);
+          response = await post(undefined);
+        } else {
+          throw err;
+        }
+      }
+
       setConversationId(response.conversationId);
       setDetectedLang(response.intent.language);
       setItems((old) => [
@@ -74,7 +96,9 @@ export function Chat({ initialPrompt }: { initialPrompt?: string }) {
       const message =
         err instanceof ApiError && err.status === 429
           ? "You're sending messages too quickly. Please wait a moment."
-          : "I'm having trouble connecting. Please try again.";
+          : err instanceof ApiError
+            ? err.message
+            : "I'm having trouble connecting. Please try again.";
       setError(message);
       setItems((old) => [...old, { role: "assistant", content: message }]);
     } finally {
@@ -90,12 +114,12 @@ export function Chat({ initialPrompt }: { initialPrompt?: string }) {
   const prompts = EXAMPLE_PROMPTS[preferredLang];
 
   return (
-    <section className="surface animate-rise overflow-hidden">
+    <section className={`${t.surface} animate-rise overflow-hidden`}>
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line px-4 py-3">
         <div>
-          <h2 className="font-display text-lg font-bold text-brand">Career chat</h2>
+          <h2 className={t.titleSection}>Career chat</h2>
           <p className="text-xs text-muted-foreground">
-            Grounded answers with citations · guest session
+            Grounded answers with citations · sign in to save your profile
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2 text-xs">
@@ -122,15 +146,13 @@ export function Chat({ initialPrompt }: { initialPrompt?: string }) {
       <div ref={scroller} className="h-[26rem] space-y-3 overflow-y-auto px-4 py-4 md:h-[30rem]">
         {items.length === 0 && (
           <div className="space-y-3">
-            <p className="text-sm text-muted-foreground">
-              Try an example in {languageLabel[preferredLang]}:
-            </p>
+            <p className={t.muted}>Try an example in {languageLabel[preferredLang]}:</p>
             <div className="grid gap-2">
               {prompts.map((prompt) => (
                 <button
                   key={prompt}
                   type="button"
-                  className="rounded-xl border border-dashed border-line bg-brand-soft/40 px-3 py-2 text-left text-sm transition hover:border-brand/40 hover:bg-brand-soft"
+                  className={t.promptChip}
                   onClick={() => void sendMessage(prompt)}
                 >
                   {prompt}
@@ -143,11 +165,7 @@ export function Chat({ initialPrompt }: { initialPrompt?: string }) {
         {items.map((item, index) => (
           <article
             key={`${item.role}-${index}`}
-            className={
-              item.role === "user"
-                ? "ml-6 rounded-2xl bg-brand px-4 py-3 text-white md:ml-16"
-                : "mr-4 space-y-3 rounded-2xl bg-muted/70 px-4 py-3 md:mr-12"
-            }
+            className={item.role === "user" ? t.chatUser : t.chatAssistant}
           >
             <p className="whitespace-pre-wrap text-sm leading-relaxed">{item.content}</p>
             {item.intent && item.role === "assistant" && (
@@ -179,7 +197,7 @@ export function Chat({ initialPrompt }: { initialPrompt?: string }) {
                 href={item.navigation.targetUrl}
                 target="_blank"
                 rel="noreferrer"
-                className="inline-flex rounded-full bg-accent px-4 py-2 text-sm font-semibold text-accent-foreground transition hover:brightness-95"
+                className={t.buttonAccent}
               >
                 {item.navigation.ctaLabel}
               </a>
@@ -189,7 +207,7 @@ export function Chat({ initialPrompt }: { initialPrompt?: string }) {
                 {item.sources.map((source) => (
                   <a
                     key={source.sourceUrl}
-                    className="rounded-full border border-line bg-white px-2.5 py-1 text-[11px] text-brand underline-offset-2 hover:underline"
+                    className="rounded-full border border-line bg-surface px-2.5 py-1 text-[11px] text-brand underline-offset-2 hover:underline"
                     href={source.sourceUrl}
                     target="_blank"
                     rel="noreferrer"
@@ -202,25 +220,20 @@ export function Chat({ initialPrompt }: { initialPrompt?: string }) {
           </article>
         ))}
 
-        {pending && (
-          <p className="animate-pulse-soft text-sm text-muted-foreground">Thinking… retrieving PGRKAM context</p>
-        )}
+        {pending && <p className={t.loading}>Thinking… retrieving PGRKAM context</p>}
       </div>
 
-      {error && <p className="border-t border-line px-4 py-2 text-sm text-danger">{error}</p>}
+      {error && <p className={`border-t border-line px-4 py-2 ${t.error}`}>{error}</p>}
 
       <form className="flex gap-2 border-t border-line p-3" onSubmit={onSubmit}>
         <input
-          className="min-w-0 flex-1 rounded-full border border-line bg-white px-4 py-2.5 text-sm outline-none ring-brand/30 focus:ring-2"
+          className={t.chatInput}
           value={value}
           onChange={(event) => setValue(event.target.value)}
           placeholder="Ask in English, Hindi, or Punjabi…"
           disabled={!ready || pending}
         />
-        <button
-          className="rounded-full bg-brand px-5 py-2.5 text-sm font-semibold text-white disabled:opacity-50"
-          disabled={!ready || pending || !value.trim()}
-        >
+        <button className={t.buttonPrimary} disabled={!ready || pending || !value.trim()}>
           Send
         </button>
       </form>

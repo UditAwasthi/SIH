@@ -14,6 +14,7 @@ import { KnowledgeModule } from "./knowledge/knowledge.module";
 import { NavigationModule } from "./navigation/navigation.module";
 import { PrismaModule } from "./prisma/prisma.module";
 import { RedisModule } from "./redis/redis.module";
+import { MailModule } from "./services/mail.module";
 
 @Module({
   imports: [
@@ -23,6 +24,7 @@ import { RedisModule } from "./redis/redis.module";
     }),
     PrismaModule,
     RedisModule,
+    MailModule,
     HealthModule,
     AuthModule,
     JobsModule,

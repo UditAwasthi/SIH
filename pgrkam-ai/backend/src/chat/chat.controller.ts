@@ -52,14 +52,13 @@ export class ChatController {
       throw new HttpException("Please wait before sending another message.", HttpStatus.TOO_MANY_REQUESTS);
     }
 
-    const conversation = body.conversationId
+    let conversation = body.conversationId
       ? await this.prisma.conversation.findFirst({
           where: { id: body.conversationId, userId: user.id },
         })
-      : await this.prisma.conversation.create({ data: { userId: user.id } });
-
+      : null;
     if (!conversation) {
-      throw new NotFoundException("Conversation not found.");
+      conversation = await this.prisma.conversation.create({ data: { userId: user.id } });
     }
 
     const intent = await this.ai.classify(body.content);
@@ -74,17 +73,35 @@ export class ChatController {
       },
     });
 
+    const prior = await this.prisma.message.findMany({
+      where: { conversationId: conversation.id },
+      orderBy: { createdAt: "desc" },
+      take: 9,
+    });
+    const history = [...prior]
+      .reverse()
+      .slice(0, -1)
+      .map((item) => ({ role: item.role, content: item.content }));
+
     let content: string;
     let jobs: unknown[] = [];
     let recommendations: unknown[] = [];
     let sources: Array<{ sourceUrl: string; lastCrawledAt?: Date | string }> = [];
 
-    if (intent.confidence < 0.55) {
-      content = this.ai.clarifyingQuestion(intent.language);
-    } else if (intent.intent === "GREETING") {
-      content = this.ai.greeting(intent.language);
-    } else if (intent.intent === "HELP") {
-      content = this.ai.help(intent.language);
+    if (intent.intent === "GREETING" || intent.intent === "HELP" || this.ai.isProductQuestion(body.content)) {
+      content = await this.ai.converse({
+        question: body.content,
+        language: intent.language,
+        history,
+      });
+    } else if (intent.confidence < 0.55) {
+      content = this.ai.needsOfficialFacts(body.content)
+        ? this.ai.clarifyingQuestion(intent.language)
+        : await this.ai.converse({
+            question: body.content,
+            language: intent.language,
+            history,
+          });
     } else if (intent.intent === "JOB_SEARCH" || intent.intent === "JOB_DETAILS") {
       jobs = await this.jobs.list({
         location: intent.entities.location,
@@ -94,7 +111,7 @@ export class ChatController {
         keywords: intent.entities.keywords,
         relax: true,
       });
-      content = jobs.length
+      const fallback = jobs.length
         ? intent.language === "hi"
           ? `मुझे ${jobs.length} सक्रिय नौकरियाँ मिलीं।`
           : intent.language === "pa"
@@ -105,10 +122,30 @@ export class ChatController {
           : intent.language === "pa"
             ? "ਇਸ ਵੇਲੇ ਕੋਈ ਮੇਲ ਖਾਂਦੀ ਸਰਗਰਮ ਨੌਕਰੀ ਨਹੀਂ ਮਿਲੀ। ਟਿਕਾਣਾ ਜਾਂ ਖੇਤਰ ਵਿਆਪਕ ਕਰਕੇ ਕੋਸ਼ਿਸ਼ ਕਰੋ।"
             : "I couldn't find an active matching job right now. Try broadening the location or sector.";
+      const jobLines = (jobs as Array<Record<string, unknown>>)
+        .slice(0, 8)
+        .map((job, index) => {
+          const skills = Array.isArray(job.requiredSkills)
+            ? (job.requiredSkills as string[]).slice(0, 6).join(", ")
+            : "";
+          return `${index + 1}. ${job.title} @ ${job.employer} | ${job.location} | ${job.sector}${
+            job.qualification ? ` | qual: ${job.qualification}` : ""
+          }${skills ? ` | skills: ${skills}` : ""}`;
+        })
+        .join("\n");
+      content = await this.ai.compose({
+        question: body.content,
+        language: intent.language,
+        intent: intent.intent,
+        fallback,
+        toolContext: jobs.length
+          ? `Matched filters: ${JSON.stringify(intent.entities)}\nJobs (${jobs.length}):\n${jobLines}`
+          : `Matched filters: ${JSON.stringify(intent.entities)}\nJobs: none`,
+      });
     } else if (intent.intent === "JOB_RECOMMENDATION") {
       recommendations = await this.recommendations.forUser(user.id);
       jobs = recommendations.map((item) => (item as { job: unknown }).job);
-      content = recommendations.length
+      const fallback = recommendations.length
         ? intent.language === "hi"
           ? "आपकी प्रोफ़ाइल के आधार पर ये नौकरियाँ उपयुक्त लगती हैं।"
           : intent.language === "pa"
@@ -119,6 +156,39 @@ export class ChatController {
           : intent.language === "pa"
             ? "ਨਿੱਜੀ ਸਿਫਾਰਸ਼ਾਂ ਲਈ ਪਹਿਲਾਂ ਆਪਣੀ ਪ੍ਰੋਫਾਈਲ ਭਰੋ।"
             : "Fill in your profile first to get personalized recommendations.";
+      const profile = await this.prisma.profile.findUnique({ where: { userId: user.id } });
+      const recLines = (
+        recommendations as Array<{
+          score: number;
+          why: {
+            matchedSkills: string[];
+            educationMatch: boolean;
+            locationMatch: boolean;
+            sectorMatch: boolean;
+          };
+          job: {
+            title: string;
+            employer: string;
+            location: string;
+            sector: string;
+          };
+        }>
+      )
+        .slice(0, 6)
+        .map(
+          (item, index) =>
+            `${index + 1}. score=${item.score} ${item.job.title} @ ${item.job.employer} (${item.job.location}, ${item.job.sector}) — matchedSkills=${item.why.matchedSkills.join("/") || "none"}; education=${item.why.educationMatch}; location=${item.why.locationMatch}; sector=${item.why.sectorMatch}`,
+        )
+        .join("\n");
+      content = await this.ai.compose({
+        question: body.content,
+        language: intent.language,
+        intent: intent.intent,
+        fallback,
+        toolContext: profile
+          ? `Profile: skills=${profile.skills.join(", ")}; education=${JSON.stringify(profile.education)}; location=${profile.location}; sectors=${profile.preferredSectors.join(", ")}; exp=${profile.experienceYears ?? 0}y\nRecommendations:\n${recLines || "none"}`
+          : "Profile: missing\nRecommendations: none",
+      });
     } else if (intent.intent === "SCHEME_SEARCH") {
       let schemes = await this.schemes.list({
         keywords: intent.entities.keywords,
@@ -128,7 +198,7 @@ export class ChatController {
         schemes = await this.schemes.list({});
       }
       if (schemes.length) {
-        content =
+        const fallback =
           intent.language === "hi"
             ? `मुझे ${schemes.length} संबंधित योजनाएँ मिलीं:\n` +
               schemes
@@ -150,6 +220,20 @@ export class ChatController {
           sourceUrl: scheme.sourceUrl,
           lastCrawledAt: scheme.updatedAt,
         }));
+        const schemeLines = schemes
+          .slice(0, 5)
+          .map(
+            (scheme, index) =>
+              `${index + 1}. ${scheme.name} [${scheme.category}] — ${scheme.eligibilityText.slice(0, 220)} | ${scheme.sourceUrl}`,
+          )
+          .join("\n");
+        content = await this.ai.compose({
+          question: body.content,
+          language: intent.language,
+          intent: intent.intent,
+          fallback,
+          toolContext: `Schemes:\n${schemeLines}`,
+        });
       } else {
         const chunks = await this.knowledge.retrieve(body.content);
         sources = chunks.map((chunk) => ({
@@ -162,7 +246,7 @@ export class ChatController {
               chunks.map((chunk) => `${chunk.content}\nSource: ${chunk.sourceUrl}`).join("\n\n"),
               intent.language,
             )
-          : "I couldn't verify this from the PGRKAM knowledge base.";
+          : this.ai.unverified(intent.language);
       }
     } else if (
       intent.intent === "REGISTRATION" ||
@@ -187,19 +271,20 @@ export class ChatController {
         sourceUrl: chunk.sourceUrl,
         lastCrawledAt: chunk.lastCrawledAt,
       }));
-      if (!chunks.length) {
-        content =
-          intent.language === "hi"
-            ? "मैं इसे PGRKAM स्रोतों से सत्यापित नहीं कर सका।"
-            : intent.language === "pa"
-              ? "ਮੈਂ ਇਸ ਨੂੰ PGRKAM ਸਰੋਤਾਂ ਤੋਂ ਤਸਦੀਕ ਨਹੀਂ ਕਰ ਸਕਿਆ।"
-              : "I couldn't verify this from the PGRKAM knowledge base.";
-      } else {
+      if (chunks.length) {
         content = await this.ai.answer(
           body.content,
           chunks.map((chunk) => `${chunk.content}\nSource: ${chunk.sourceUrl}`).join("\n\n"),
           intent.language,
         );
+      } else if (intent.intent === "REGISTRATION") {
+        content = this.ai.unverified(intent.language);
+      } else {
+        content = await this.ai.openEndedOrUnverified({
+          question: body.content,
+          language: intent.language,
+          history,
+        });
       }
     } else {
       const chunks = await this.knowledge.retrieve(body.content);
@@ -207,19 +292,18 @@ export class ChatController {
         sourceUrl: chunk.sourceUrl,
         lastCrawledAt: chunk.lastCrawledAt,
       }));
-      if (!chunks.length) {
-        content =
-          intent.language === "hi"
-            ? "मैं इसे PGRKAM स्रोतों से सत्यापित नहीं कर सका।"
-            : intent.language === "pa"
-              ? "ਮੈਂ ਇਸ ਨੂੰ PGRKAM ਸਰੋਤਾਂ ਤੋਂ ਤਸਦੀਕ ਨਹੀਂ ਕਰ ਸਕਿਆ।"
-              : "I couldn't verify this from the PGRKAM knowledge base.";
-      } else {
+      if (chunks.length) {
         content = await this.ai.answer(
           body.content,
           chunks.map((chunk) => `${chunk.content}\nSource: ${chunk.sourceUrl}`).join("\n\n"),
           intent.language,
         );
+      } else {
+        content = await this.ai.openEndedOrUnverified({
+          question: body.content,
+          language: intent.language,
+          history,
+        });
       }
     }
 

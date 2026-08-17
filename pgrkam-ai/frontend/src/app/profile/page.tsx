@@ -1,10 +1,14 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useEffect, useState } from "react";
+import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense, useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
-import { Profile, api, ensureGuest } from "@/lib/api";
+import { useAuth } from "@/components/auth-provider";
+import { ApiError, Profile, api } from "@/lib/api";
+import { useTheme } from "@/theme";
 
 const schema = z.object({
   education: z.string().min(2, "Add your education"),
@@ -18,12 +22,15 @@ const schema = z.object({
 
 type FormValues = z.infer<typeof schema>;
 
-const inputClass =
-  "mt-1 w-full rounded-xl border border-line px-3 py-2 text-sm outline-none ring-brand/30 focus:ring-2";
-
-export default function ProfilePage() {
+function ProfilePageInner() {
+  const { classes: t } = useTheme();
+  const { user, loading: authLoading, isAuthenticated, refresh } = useAuth();
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const onboarding = searchParams.get("onboarding") === "1";
   const [status, setStatus] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [ready, setReady] = useState(false);
   const {
     register,
     handleSubmit,
@@ -43,11 +50,19 @@ export default function ProfilePage() {
   });
 
   useEffect(() => {
+    if (authLoading) return;
+    if (!isAuthenticated) {
+      router.replace(`/signup?next=${encodeURIComponent("/profile?onboarding=1")}`);
+      return;
+    }
+
     void (async () => {
       try {
-        await ensureGuest();
         const profile = await api<Profile | null>("/profile");
-        if (!profile) return;
+        if (!profile) {
+          setReady(true);
+          return;
+        }
         const education = Array.isArray(profile.education)
           ? profile.education
               .map((item) => {
@@ -62,7 +77,7 @@ export default function ProfilePage() {
             ? profile.education
             : "";
         reset({
-          education: education || "B.Tech CSE",
+          education: education || "",
           skills: profile.skills.join(", "),
           experienceYears: profile.experienceYears ?? 0,
           location: profile.location ?? "Punjab",
@@ -72,15 +87,16 @@ export default function ProfilePage() {
         });
       } catch {
         setError("Could not load profile. Start the API and refresh.");
+      } finally {
+        setReady(true);
       }
     })();
-  }, [reset]);
+  }, [authLoading, isAuthenticated, reset, router]);
 
   async function onSubmit(values: FormValues) {
     setError(null);
     setStatus(null);
     try {
-      await ensureGuest();
       await api<Profile>("/profile", {
         method: "PUT",
         body: JSON.stringify({
@@ -99,54 +115,104 @@ export default function ProfilePage() {
           salaryMax: values.salaryMax,
         }),
       });
+      await refresh();
       setStatus("Profile saved. Check Recommendations or ask chat for “jobs for me”.");
-    } catch {
-      setError("Could not save profile.");
+      if (onboarding) router.push("/recommendations");
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Could not save profile.");
     }
   }
 
-  return (
-    <main className="mx-auto max-w-2xl px-4 py-10 md:px-6">
-      <h1 className="font-display text-3xl font-extrabold text-brand">Your profile</h1>
-      <p className="mt-2 text-sm text-muted-foreground">
-        Manual profile powers explainable job recommendations. Skills and sectors can be
-        comma-separated.
-      </p>
+  if (authLoading || !isAuthenticated || !ready) {
+    return (
+      <main className={t.pageNarrow}>
+        <p className={t.loading}>Loading your profile…</p>
+      </main>
+    );
+  }
 
-      <form className="surface mt-6 space-y-4 animate-rise p-5" onSubmit={handleSubmit(onSubmit)}>
-        <Field label="Education" error={errors.education?.message}>
-          <input className={inputClass} placeholder="B.Tech CSE" {...register("education")} />
+  return (
+    <main className={t.pageNarrow}>
+      <h1 className={t.title}>
+        {onboarding || !user?.hasProfile ? "Create your profile" : "Your profile"}
+      </h1>
+      <p className={t.lead}>
+        {onboarding || !user?.hasProfile
+          ? "Tell us about your education and skills so we can recommend matching jobs."
+          : "Update skills and preferences anytime. Comma-separate skills and sectors."}
+      </p>
+      {user?.email && (
+        <p className="mt-1 text-xs text-muted-foreground">
+          Signed in as <span className="font-medium text-brand">{user.email}</span>
+        </p>
+      )}
+
+      <form className={`mt-6 space-y-4 ${t.surfacePad}`} onSubmit={handleSubmit(onSubmit)}>
+        <Field label="Education" error={errors.education?.message} labelClass={t.label} errorClass={t.fieldError}>
+          <input className={t.input} placeholder="B.Tech CSE" {...register("education")} />
         </Field>
-        <Field label="Skills" error={errors.skills?.message}>
-          <input className={inputClass} placeholder="JavaScript, React, SQL" {...register("skills")} />
+        <Field label="Skills" error={errors.skills?.message} labelClass={t.label} errorClass={t.fieldError}>
+          <input className={t.input} placeholder="JavaScript, React, SQL" {...register("skills")} />
         </Field>
-        <Field label="Experience (years)" error={errors.experienceYears?.message}>
-          <input className={inputClass} type="number" {...register("experienceYears")} />
+        <Field
+          label="Experience (years)"
+          error={errors.experienceYears?.message}
+          labelClass={t.label}
+          errorClass={t.fieldError}
+        >
+          <input className={t.input} type="number" {...register("experienceYears")} />
         </Field>
-        <Field label="Preferred location" error={errors.location?.message}>
-          <input className={inputClass} placeholder="Punjab / Ludhiana" {...register("location")} />
+        <Field label="Preferred location" error={errors.location?.message} labelClass={t.label} errorClass={t.fieldError}>
+          <input className={t.input} placeholder="Punjab / Ludhiana" {...register("location")} />
         </Field>
-        <Field label="Preferred sectors" error={errors.preferredSectors?.message}>
-          <input className={inputClass} placeholder="IT, Healthcare" {...register("preferredSectors")} />
+        <Field
+          label="Preferred sectors"
+          error={errors.preferredSectors?.message}
+          labelClass={t.label}
+          errorClass={t.fieldError}
+        >
+          <input className={t.input} placeholder="IT, Healthcare" {...register("preferredSectors")} />
         </Field>
         <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="Salary min (₹)" error={errors.salaryMin?.message}>
-            <input className={inputClass} type="number" {...register("salaryMin")} />
+          <Field label="Salary min (₹)" error={errors.salaryMin?.message} labelClass={t.label} errorClass={t.fieldError}>
+            <input className={t.input} type="number" {...register("salaryMin")} />
           </Field>
-          <Field label="Salary max (₹)" error={errors.salaryMax?.message}>
-            <input className={inputClass} type="number" {...register("salaryMax")} />
+          <Field label="Salary max (₹)" error={errors.salaryMax?.message} labelClass={t.label} errorClass={t.fieldError}>
+            <input className={t.input} type="number" {...register("salaryMax")} />
           </Field>
         </div>
-        {error && <p className="text-sm text-danger">{error}</p>}
-        {status && <p className="text-sm text-brand">{status}</p>}
-        <button
-          className="rounded-full bg-brand px-5 py-2.5 text-sm font-semibold text-white disabled:opacity-50"
-          disabled={isSubmitting}
-        >
-          {isSubmitting ? "Saving…" : "Save profile"}
-        </button>
+        {error && <p className={t.error}>{error}</p>}
+        {status && <p className={t.success}>{status}</p>}
+        <div className="flex flex-wrap items-center gap-3">
+          <button className={t.buttonPrimary} disabled={isSubmitting}>
+            {isSubmitting
+              ? "Saving…"
+              : onboarding || !user?.hasProfile
+                ? "Save and continue"
+                : "Save profile"}
+          </button>
+          {user?.hasProfile && (
+            <Link href="/recommendations" className={t.link}>
+              View recommendations
+            </Link>
+          )}
+        </div>
       </form>
     </main>
+  );
+}
+
+export default function ProfilePage() {
+  return (
+    <Suspense
+      fallback={
+        <main className="mx-auto max-w-2xl px-4 py-10 md:px-6">
+          <p className="text-sm text-muted-foreground">Loading…</p>
+        </main>
+      }
+    >
+      <ProfilePageInner />
+    </Suspense>
   );
 }
 
@@ -154,16 +220,20 @@ function Field({
   label,
   error,
   children,
+  labelClass,
+  errorClass,
 }: {
   label: string;
   error?: string;
   children: React.ReactNode;
+  labelClass: string;
+  errorClass: string;
 }) {
   return (
-    <label className="block text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+    <label className={labelClass}>
       {label}
       {children}
-      {error && <span className="mt-1 block normal-case tracking-normal text-danger">{error}</span>}
+      {error && <span className={errorClass}>{error}</span>}
     </label>
   );
 }

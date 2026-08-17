@@ -4,7 +4,8 @@ SIH1305 MVP: multilingual career chatbot over PGRKAM jobs, schemes, and guidance
 
 ## What works (7-day plan MVP)
 
-- Guest JWT auth (no SMS)
+- Email/password auth (sign up, sign in) plus optional guest JWT for chat
+- Profile creation after sign-up, used for ranked recommendations
 - Multilingual chat (EN / HI / PA) with intent classification
 - RAG over seeded PGRKAM knowledge (vector search when embeddings exist; text fallback otherwise)
 - Anti-hallucination: weak/empty context → “couldn’t verify”

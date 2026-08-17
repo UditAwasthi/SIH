@@ -1,19 +1,34 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { useAuth } from "@/components/auth-provider";
 import { JobCard } from "@/components/job-card";
-import { Recommendation, api, ensureGuest } from "@/lib/api";
+import { Recommendation, api } from "@/lib/api";
+import { useTheme } from "@/theme";
 
 export default function RecommendationsPage() {
+  const { classes: t } = useTheme();
+  const { loading: authLoading, isAuthenticated, user } = useAuth();
+  const router = useRouter();
   const [items, setItems] = useState<Recommendation[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (authLoading) return;
+    if (!isAuthenticated) {
+      router.replace(`/signup?next=${encodeURIComponent("/recommendations")}`);
+      return;
+    }
+    if (!user?.hasProfile) {
+      router.replace("/profile?onboarding=1");
+      return;
+    }
+
     void (async () => {
       try {
-        await ensureGuest();
         const data = await api<Recommendation[]>("/recommendations/jobs");
         setItems(data);
       } catch {
@@ -22,24 +37,32 @@ export default function RecommendationsPage() {
         setLoading(false);
       }
     })();
-  }, []);
+  }, [authLoading, isAuthenticated, user?.hasProfile, router]);
+
+  if (authLoading || !isAuthenticated || !user?.hasProfile) {
+    return (
+      <main className={t.pageMedium}>
+        <p className={t.loading}>Preparing recommendations…</p>
+      </main>
+    );
+  }
 
   return (
-    <main className="mx-auto max-w-3xl px-4 py-10 md:px-6">
-      <h1 className="font-display text-3xl font-extrabold text-brand">Recommended for you</h1>
-      <p className="mt-2 text-sm text-muted-foreground">
+    <main className={t.pageMedium}>
+      <h1 className={t.title}>Recommended for you</h1>
+      <p className={t.lead}>
         Deterministic scoring from skills, education, location, and sector preferences — with a
         short “why” for each match.
       </p>
-      <Link href="/profile" className="mt-3 inline-block text-sm font-medium text-brand underline">
+      <Link href="/profile" className={`mt-3 inline-block ${t.link}`}>
         Edit profile
       </Link>
 
       <section className="mt-6 space-y-3">
-        {loading && <p className="animate-pulse-soft text-sm text-muted-foreground">Scoring jobs…</p>}
-        {error && <p className="rounded-xl border border-danger/30 bg-white px-4 py-3 text-sm text-danger">{error}</p>}
+        {loading && <p className={t.loading}>Scoring jobs…</p>}
+        {error && <p className={t.errorBanner}>{error}</p>}
         {!loading && !error && items.length === 0 && (
-          <p className="surface px-4 py-8 text-center text-sm text-muted-foreground">
+          <p className={t.surfaceEmpty}>
             No recommendations yet. Fill your profile and ensure jobs are seeded.
           </p>
         )}

@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { Figtree, Syne } from "next/font/google";
+import { AuthProvider } from "@/components/auth-provider";
 import { SiteHeader } from "@/components/site-header";
+import { ThemeProvider } from "@/theme";
 import "./globals.css";
 
 const display = Syne({
@@ -22,10 +24,14 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en">
+    <html lang="en" data-theme="light" suppressHydrationWarning>
       <body className={`${display.variable} ${body.variable}`}>
-        <SiteHeader />
-        {children}
+        <ThemeProvider>
+          <AuthProvider>
+            <SiteHeader />
+            {children}
+          </AuthProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

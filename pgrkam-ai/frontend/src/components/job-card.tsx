@@ -1,9 +1,12 @@
+"use client";
+
 import Link from "next/link";
 import type { Job } from "@/lib/api";
+import { themeClasses as t } from "@/theme";
 
 export function JobCard({ job, score, why }: { job: Job; score?: number; why?: string[] }) {
   return (
-    <article className="rounded-xl border border-line bg-white/90 p-3 transition hover:border-brand/40">
+    <article className={t.card}>
       <div className="flex items-start justify-between gap-3">
         <div>
           <h3 className="font-display text-base font-bold text-brand">
@@ -15,11 +18,7 @@ export function JobCard({ job, score, why }: { job: Job; score?: number; why?: s
             {job.employer} · {job.location}
           </p>
         </div>
-        {typeof score === "number" && (
-          <span className="rounded-full bg-brand-soft px-2.5 py-1 text-xs font-semibold text-brand">
-            {score}%
-          </span>
-        )}
+        {typeof score === "number" && <span className={t.chip}>{score}%</span>}
       </div>
       <p className="mt-2 text-xs text-muted-foreground">
         {job.sector}

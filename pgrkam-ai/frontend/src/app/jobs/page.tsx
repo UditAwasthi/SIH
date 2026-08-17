@@ -3,8 +3,10 @@
 import { FormEvent, useEffect, useState } from "react";
 import { JobCard } from "@/components/job-card";
 import { Job, api } from "@/lib/api";
+import { useTheme } from "@/theme";
 
 export default function JobsPage() {
+  const { classes: t } = useTheme();
   const [jobs, setJobs] = useState<Job[]>([]);
   const [q, setQ] = useState("");
   const [location, setLocation] = useState("");
@@ -48,65 +50,56 @@ export default function JobsPage() {
 
   return (
     <main className="mx-auto grid max-w-6xl gap-6 px-4 py-8 md:grid-cols-[240px_1fr] md:px-6">
-      <aside className="surface h-fit animate-rise p-4">
+      <aside className={`${t.surface} h-fit animate-rise p-4`}>
         <h1 className="font-display text-xl font-bold text-brand">Browse jobs</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Structured filters from seeded PGRKAM-style listings.
-        </p>
+        <p className={`mt-1 ${t.muted}`}>Structured filters from seeded PGRKAM-style listings.</p>
         <form className="mt-4 space-y-3" onSubmit={onSubmit}>
-          <label className="block text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+          <label className={t.label}>
             Search
             <input
-              className="mt-1 w-full rounded-lg border border-line px-3 py-2 text-sm"
+              className={t.inputCompact}
               value={q}
               onChange={(event) => setQ(event.target.value)}
               placeholder="Title or employer"
             />
           </label>
-          <label className="block text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+          <label className={t.label}>
             Location
             <input
-              className="mt-1 w-full rounded-lg border border-line px-3 py-2 text-sm"
+              className={t.inputCompact}
               value={location}
               onChange={(event) => setLocation(event.target.value)}
               placeholder="Punjab, Ludhiana…"
             />
           </label>
-          <label className="block text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+          <label className={t.label}>
             Sector
             <input
-              className="mt-1 w-full rounded-lg border border-line px-3 py-2 text-sm"
+              className={t.inputCompact}
               value={sector}
               onChange={(event) => setSector(event.target.value)}
               placeholder="IT, Healthcare…"
             />
           </label>
-          <label className="block text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+          <label className={t.label}>
             Qualification
             <input
-              className="mt-1 w-full rounded-lg border border-line px-3 py-2 text-sm"
+              className={t.inputCompact}
               value={qualification}
               onChange={(event) => setQualification(event.target.value)}
               placeholder="B.Tech, 12th…"
             />
           </label>
-          <button
-            className="w-full rounded-full bg-brand py-2.5 text-sm font-semibold text-white"
-            disabled={pending}
-          >
+          <button className={t.buttonPrimaryBlock} disabled={pending}>
             {pending ? "Filtering…" : "Apply filters"}
           </button>
         </form>
       </aside>
 
       <section className="space-y-3 animate-rise" style={{ animationDelay: "80ms" }}>
-        {error && (
-          <p className="rounded-xl border border-danger/30 bg-white px-4 py-3 text-sm text-danger">
-            {error}
-          </p>
-        )}
+        {error && <p className={t.errorBanner}>{error}</p>}
         {!error && !pending && jobs.length === 0 && (
-          <p className="surface px-4 py-8 text-center text-sm text-muted-foreground">
+          <p className={t.surfaceEmpty}>
             No jobs matched. Try clearing filters or run <code>npm run prisma:seed</code>.
           </p>
         )}

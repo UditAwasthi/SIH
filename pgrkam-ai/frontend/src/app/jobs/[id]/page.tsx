@@ -4,8 +4,10 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Job, api } from "@/lib/api";
+import { useTheme } from "@/theme";
 
 export default function JobDetailPage() {
+  const { classes: t } = useTheme();
   const params = useParams<{ id: string }>();
   const [job, setJob] = useState<Job | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -19,9 +21,9 @@ export default function JobDetailPage() {
 
   if (error) {
     return (
-      <main className="mx-auto max-w-3xl px-4 py-10">
-        <p className="text-danger">{error}</p>
-        <Link href="/jobs" className="mt-4 inline-block text-sm underline">
+      <main className={t.pageMedium}>
+        <p className={t.error}>{error}</p>
+        <Link href="/jobs" className={`mt-4 inline-block ${t.link}`}>
           Back to jobs
         </Link>
       </main>
@@ -30,20 +32,20 @@ export default function JobDetailPage() {
 
   if (!job) {
     return (
-      <main className="mx-auto max-w-3xl px-4 py-10">
-        <p className="animate-pulse-soft text-muted-foreground">Loading job…</p>
+      <main className={t.pageMedium}>
+        <p className={t.loading}>Loading job…</p>
       </main>
     );
   }
 
   return (
-    <main className="mx-auto max-w-3xl px-4 py-10 md:px-6">
+    <main className={t.pageMedium}>
       <Link href="/jobs" className="text-sm text-muted-foreground hover:text-brand">
         ← All jobs
       </Link>
-      <article className="surface mt-4 animate-rise p-6">
+      <article className={`${t.surface} mt-4 animate-rise p-6`}>
         <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{job.sector}</p>
-        <h1 className="mt-1 font-display text-3xl font-extrabold text-brand">{job.title}</h1>
+        <h1 className={`mt-1 ${t.title}`}>{job.title}</h1>
         <p className="mt-2 text-muted-foreground">
           {job.employer} · {job.location}
         </p>
@@ -79,12 +81,7 @@ export default function JobDetailPage() {
             <p className="mt-2 text-sm">{job.requiredSkills.join(" · ")}</p>
           </div>
         )}
-        <a
-          href={job.sourceUrl}
-          target="_blank"
-          rel="noreferrer"
-          className="mt-8 inline-flex rounded-full bg-accent px-5 py-2.5 text-sm font-semibold text-accent-foreground"
-        >
+        <a href={job.sourceUrl} target="_blank" rel="noreferrer" className={`mt-8 ${t.buttonAccent}`}>
           Open on PGRKAM
         </a>
       </article>

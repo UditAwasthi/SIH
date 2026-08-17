@@ -1,5 +1,5 @@
 const baseUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
-const tokenKey = "pgrkam_guest_token";
+export const tokenKey = "pgrkam_auth_token";
 
 export class ApiError extends Error {
   status: number;
@@ -9,33 +9,111 @@ export class ApiError extends Error {
   }
 }
 
+export type AuthUser = {
+  id: string;
+  name: string | null;
+  email: string | null;
+  preferredLang: string;
+  isGuest: boolean;
+  hasProfile: boolean;
+};
+
+export type AuthResponse = {
+  accessToken: string;
+  user: AuthUser;
+};
+
+export function getStoredToken(): string | null {
+  if (typeof window === "undefined") return null;
+  const current = localStorage.getItem(tokenKey);
+  if (current) return current;
+  const legacy = localStorage.getItem("pgrkam_guest_token");
+  if (legacy) {
+    localStorage.setItem(tokenKey, legacy);
+    localStorage.removeItem("pgrkam_guest_token");
+    return legacy;
+  }
+  return null;
+}
+
+export function setStoredToken(token: string | null) {
+  if (typeof window === "undefined") return;
+  if (token) localStorage.setItem(tokenKey, token);
+  else localStorage.removeItem(tokenKey);
+}
+
 export async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
   const headers: HeadersInit = {
     "Content-Type": "application/json",
     ...init.headers,
   };
   if (typeof window !== "undefined") {
-    const token = localStorage.getItem(tokenKey);
+    const token = getStoredToken();
     if (token) {
       (headers as Record<string, string>).Authorization = `Bearer ${token}`;
     }
   }
 
-  const response = await fetch(new URL(path, baseUrl), { ...init, headers });
+  const url = `${baseUrl.replace(/\/$/, "")}${path.startsWith("/") ? path : `/${path}`}`;
+  let response: Response;
+  try {
+    response = await fetch(url, { ...init, headers });
+  } catch {
+    throw new ApiError("Could not reach the API. Is the backend running?", 0);
+  }
   if (!response.ok) {
     const text = await response.text();
-    throw new ApiError(text || "Request failed", response.status);
+    let message = text || "Request failed";
+    try {
+      const parsed = JSON.parse(text) as { message?: string | string[] };
+      if (Array.isArray(parsed.message)) message = parsed.message.join(", ");
+      else if (parsed.message) message = parsed.message;
+    } catch {
+      /* keep raw text */
+    }
+    throw new ApiError(message, response.status);
   }
   return response.json() as Promise<T>;
 }
 
+/** Ensure any session exists (guest if needed) for chat / public API use. */
 export async function ensureGuest(): Promise<string | null> {
   if (typeof window === "undefined") return null;
-  const existing = localStorage.getItem(tokenKey);
+  const existing = getStoredToken();
   if (existing) return existing;
-  const result = await api<{ accessToken: string }>("/auth/guest", { method: "POST" });
-  localStorage.setItem(tokenKey, result.accessToken);
+  const result = await api<AuthResponse>("/auth/guest", { method: "POST" });
+  setStoredToken(result.accessToken);
   return result.accessToken;
+}
+
+export async function registerAccount(input: {
+  name: string;
+  email: string;
+  password: string;
+  preferredLang?: "en" | "hi" | "pa";
+}): Promise<AuthResponse> {
+  const result = await api<AuthResponse>("/auth/register", {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+  setStoredToken(result.accessToken);
+  return result;
+}
+
+export async function loginAccount(input: {
+  email: string;
+  password: string;
+}): Promise<AuthResponse> {
+  const result = await api<AuthResponse>("/auth/login", {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+  setStoredToken(result.accessToken);
+  return result;
+}
+
+export async function fetchMe(): Promise<AuthUser> {
+  return api<AuthUser>("/auth/me");
 }
 
 export type Job = {
