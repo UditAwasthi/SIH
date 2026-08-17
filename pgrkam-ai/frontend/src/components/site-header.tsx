@@ -1,54 +1,69 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { useState } from "react";
 import { useAuth } from "@/components/auth-provider";
 import { Button } from "@/components/ui/button";
+import { Led } from "@/components/ui/dot-matrix";
 import { useTheme } from "@/theme";
 
 const links = [
   { href: "/", label: "Home" },
-  { href: "/chat", label: "Chat" },
   { href: "/jobs", label: "Jobs" },
+  { href: "/chat", label: "Assistant" },
   { href: "/recommendations", label: "For you" },
   { href: "/profile", label: "Profile" },
   { href: "/upcoming", label: "Upcoming" },
 ];
 
 export function SiteHeader() {
+  const pathname = usePathname();
   const { user, loading, isAuthenticated, signOut } = useAuth();
-  const { classes, mode, toggleMode } = useTheme();
+  const { mode, toggleMode } = useTheme();
+  const [menuOpen, setMenuOpen] = useState(false);
 
   return (
-    <header className={classes.header}>
-      <div className={classes.headerInner}>
-        <Link href="/" className="group min-w-0">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-brand/70">SIH1305</p>
-          <p className="font-display text-lg font-extrabold leading-tight text-brand transition group-hover:opacity-80 md:text-xl">
-            PGRKAM AI
-          </p>
+    <header className="sticky top-0 z-40 border-b border-line bg-void/94">
+      <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3 pl-6 md:px-10 md:pl-rail">
+        <Link href="/" className="flex items-center gap-2">
+          <Led active />
+          <span className="font-display text-lg font-medium tracking-tight text-glyph">PGRKAM</span>
         </Link>
-        <div className="flex flex-wrap items-center justify-end gap-2">
-          <nav className="flex flex-wrap items-center justify-end gap-1 text-sm font-medium md:gap-2">
-            {links.map((link) => (
-              <Link key={link.href} href={link.href} className={classes.navLink}>
+
+        <nav className="hidden items-center gap-1 lg:flex">
+          {links.map((link) => {
+            const active = pathname === link.href;
+            return (
+              <Link
+                key={link.href}
+                href={link.href}
+                className={`inline-flex items-center gap-2 px-2.5 py-1 text-sm ${
+                  active ? "text-glyph" : "text-mute hover:text-glyph"
+                }`}
+              >
+                <Led on={active} active={active} size={5} />
                 {link.label}
               </Link>
-            ))}
-          </nav>
+            );
+          })}
+        </nav>
+
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={toggleMode}
+            className="hidden items-center gap-2 px-2 py-1 font-mono text-[10px] uppercase tracking-[0.14em] text-mute hover:text-glyph sm:inline-flex"
+            aria-label={mode === "dark" ? "Switch to light" : "Switch to dark"}
+          >
+            <Led active={mode === "dark"} on={mode === "light"} size={5} />
+            {mode === "dark" ? "Dark" : "Light"}
+          </button>
           {!loading && (
-            <div className="flex items-center gap-2 border-l border-line/80 pl-2 md:pl-3">
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={toggleMode}
-                aria-label={mode === "light" ? "Switch to dark theme" : "Switch to light theme"}
-              >
-                {mode === "light" ? "Dark" : "Light"}
-              </Button>
+            <div className="hidden items-center gap-2 sm:flex">
               {isAuthenticated ? (
                 <>
-                  <span className="hidden max-w-[10rem] truncate text-xs text-muted-foreground sm:inline">
+                  <span className="hidden max-w-[10rem] truncate font-mono text-[10px] uppercase tracking-[0.08em] text-mute md:inline">
                     {user?.name || user?.email}
                   </span>
                   <Button type="button" variant="outline" size="sm" onClick={signOut}>
@@ -57,18 +72,62 @@ export function SiteHeader() {
                 </>
               ) : (
                 <>
-                  <Button asChild variant="outline" size="sm">
-                    <Link href="/signin">Sign in</Link>
+                  <Button asChild variant="ghost" size="sm">
+                    <Link href="/signup">Sign up</Link>
                   </Button>
                   <Button asChild size="sm">
-                    <Link href="/signup">Sign up</Link>
+                    <Link href="/signin">Sign in</Link>
                   </Button>
                 </>
               )}
             </div>
           )}
+          <button
+            className="px-2 py-1 font-mono text-[10px] uppercase tracking-[0.14em] text-glyph lg:hidden"
+            onClick={() => setMenuOpen((open) => !open)}
+            aria-label="Toggle menu"
+            type="button"
+          >
+            {menuOpen ? "Close" : "Menu"}
+          </button>
         </div>
       </div>
+
+      {menuOpen && (
+        <div className="border-t border-line bg-void px-4 py-4 lg:hidden">
+          <ul className="flex flex-col">
+            {links.map((link) => {
+              const active = pathname === link.href;
+              return (
+                <li key={link.href}>
+                  <Link
+                    href={link.href}
+                    className="flex items-center gap-3 px-1 py-3 text-base text-glyph"
+                    onClick={() => setMenuOpen(false)}
+                  >
+                    <Led on={active} active={active} />
+                    {link.label}
+                  </Link>
+                </li>
+              );
+            })}
+            <li className="mt-2 flex flex-wrap gap-2">
+              <Button type="button" variant="ghost" onClick={toggleMode}>
+                {mode === "dark" ? "Light" : "Dark"}
+              </Button>
+              {isAuthenticated ? (
+                <Button type="button" variant="outline" onClick={signOut}>
+                  Sign out
+                </Button>
+              ) : (
+                <Button asChild>
+                  <Link href="/signin">Sign in</Link>
+                </Button>
+              )}
+            </li>
+          </ul>
+        </div>
+      )}
     </header>
   );
 }

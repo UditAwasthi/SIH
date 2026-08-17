@@ -107,19 +107,17 @@ export default function UpcomingPage() {
           Highest impact after the current demo is stable: voice, resume, multi-turn chat, and live
           portal data.
         </p>
-        <div className="mt-8 grid gap-4 sm:grid-cols-2">
-          {nextUp.map((item, index) => (
-            <article
-              key={item.title}
-              className={`${t.card} animate-rise`}
-              style={{ animationDelay: `${index * 60}ms` }}
-            >
+        <ul className="mt-8 border-t border-line">
+          {nextUp.map((item) => (
+            <li key={item.title} className="grid gap-2 border-b border-line py-6 md:grid-cols-[7rem_1fr]">
               <span className={t.chip}>{item.horizon}</span>
-              <h3 className={`mt-3 ${t.titleSection}`}>{item.title}</h3>
-              <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{item.body}</p>
-            </article>
+              <div>
+                <h3 className={t.titleSection}>{item.title}</h3>
+                <p className="mt-2 max-w-2xl text-sm leading-6 text-mute">{item.body}</p>
+              </div>
+            </li>
           ))}
-        </div>
+        </ul>
       </section>
 
       <section className="mt-14 md:mt-20">
@@ -129,17 +127,17 @@ export default function UpcomingPage() {
           Differentiator and stretch work from the product plan. We will pick these up one at a
           time after the core demo stays reliable.
         </p>
-        <div className="mt-8 grid gap-4 sm:grid-cols-2">
+        <ul className="mt-8 border-t border-line">
           {later.map((item) => (
-            <article key={item.title} className={t.card}>
-              <span className="rounded-md bg-muted px-2.5 py-1 text-xs font-semibold text-muted-foreground">
-                {item.horizon}
-              </span>
-              <h3 className={`mt-3 ${t.titleSection}`}>{item.title}</h3>
-              <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{item.body}</p>
-            </article>
+            <li key={item.title} className="grid gap-2 border-b border-line py-6 md:grid-cols-[7rem_1fr]">
+              <span className={t.chip}>{item.horizon}</span>
+              <div>
+                <h3 className={t.titleSection}>{item.title}</h3>
+                <p className="mt-2 max-w-2xl text-sm leading-6 text-mute">{item.body}</p>
+              </div>
+            </li>
           ))}
-        </div>
+        </ul>
       </section>
 
       <section

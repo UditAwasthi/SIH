@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import type { Job } from "@/lib/api";
+import { Led } from "@/components/ui/dot-matrix";
 import { themeClasses as t } from "@/theme";
 
 export function JobCard({ job, score, why }: { job: Job; score?: number; why?: string[] }) {
@@ -9,36 +10,45 @@ export function JobCard({ job, score, why }: { job: Job; score?: number; why?: s
     <article className={t.card}>
       <div className="flex items-start justify-between gap-3">
         <div>
-          <h3 className="font-display text-base font-bold text-brand">
-            <Link href={`/jobs/${job.id}`} className="hover:underline">
+          <p className="meta mb-2">
+            {job.sector}
+            {job.location ? ` / ${job.location}` : ""}
+          </p>
+          <h3 className="font-display text-lg font-medium text-glyph">
+            <Link href={`/jobs/${job.id}`} className="hover:text-led">
               {job.title}
             </Link>
           </h3>
-          <p className="mt-0.5 text-sm text-muted-foreground">
-            {job.employer} · {job.location}
-          </p>
+          <p className="mt-1 text-sm text-mute">{job.employer}</p>
         </div>
-        {typeof score === "number" && <span className={t.chip}>{score}%</span>}
+        {typeof score === "number" && (
+          <span className="flex items-center gap-2 font-mono text-sm text-glyph">
+            <Led active={score >= 70} on={score >= 40} />
+            {score}
+          </span>
+        )}
       </div>
-      <p className="mt-2 text-xs text-muted-foreground">
-        {job.sector}
-        {job.qualification ? ` · ${job.qualification}` : ""}
+      <p className="mt-3 font-mono text-[11px] text-mute">
+        {job.qualification ? job.qualification : "Open qualification"}
         {job.minExperience != null ? ` · ${job.minExperience}+ yrs` : ""}
       </p>
       {job.requiredSkills?.length > 0 && (
-        <p className="mt-2 text-xs text-foreground/80">{job.requiredSkills.slice(0, 5).join(" · ")}</p>
+        <p className="mt-2 text-xs text-mute">{job.requiredSkills.slice(0, 5).join("  ·  ")}</p>
       )}
       {why && why.length > 0 && (
-        <ul className="mt-2 space-y-1 text-xs text-brand">
+        <ul className="mt-3 space-y-1 font-mono text-[11px] text-mute">
           {why.map((item) => (
-            <li key={item}>✓ {item}</li>
+            <li key={item} className="flex items-start gap-2">
+              <Led on size={5} className="mt-1" />
+              {item}
+            </li>
           ))}
         </ul>
       )}
-      <div className="mt-3 flex flex-wrap gap-2">
+      <div className="mt-4 flex flex-wrap gap-2">
         <Link
           href={`/jobs/${job.id}`}
-          className="rounded-full border border-line px-3 py-1 text-xs font-medium hover:bg-muted"
+          className="border border-line px-3 py-1.5 text-xs font-semibold text-glyph hover:border-glyph"
         >
           Details
         </Link>
@@ -46,7 +56,7 @@ export function JobCard({ job, score, why }: { job: Job; score?: number; why?: s
           href={job.sourceUrl}
           target="_blank"
           rel="noreferrer"
-          className="rounded-full bg-brand px-3 py-1 text-xs font-medium text-white hover:opacity-90"
+          className="bg-led px-3 py-1.5 text-xs font-semibold text-glyph hover:bg-led-dim"
         >
           Apply on PGRKAM
         </a>

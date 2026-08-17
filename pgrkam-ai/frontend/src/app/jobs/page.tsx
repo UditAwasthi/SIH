@@ -49,9 +49,9 @@ export default function JobsPage() {
   }
 
   return (
-    <main className="mx-auto grid max-w-6xl gap-6 px-4 py-8 md:grid-cols-[240px_1fr] md:px-6">
+    <main className="mx-auto grid max-w-6xl gap-8 px-4 py-8 pl-6 md:grid-cols-[240px_1fr] md:px-10 md:pl-rail">
       <aside className={`${t.surface} h-fit animate-rise p-4`}>
-        <h1 className="font-display text-xl font-bold text-brand">Browse jobs</h1>
+        <h1 className="font-display text-xl font-medium text-glyph">Browse jobs</h1>
         <p className={`mt-1 ${t.muted}`}>Structured filters from seeded PGRKAM-style listings.</p>
         <form className="mt-4 space-y-3" onSubmit={onSubmit}>
           <label className={t.label}>

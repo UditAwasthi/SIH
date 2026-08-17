@@ -3,22 +3,75 @@
 @tailwind utilities;
 
 @layer base {
-  :root {
-    --background: 150 20% 96%;
-    --foreground: 162 42% 12%;
-    --muted: 150 12% 90%;
-    --muted-foreground: 162 12% 35%;
-    --brand: 162 55% 18%;
-    --brand-soft: 158 28% 88%;
-    --accent: 38 92% 48%;
-    --accent-foreground: 30 40% 10%;
+  :root,
+  [data-theme="dark"] {
+    --void: #0b0b0b;
+    --raised: #151515;
+    --struct: #242424;
+    --line-hex: #2e2e2e;
+    --mute: #a8a8a8;
+    --glyph: #f5f5f5;
+    --led: #ff0000;
+    --led-dim: #7a0000;
+    --dot-off: #2a2a2a;
+    --background: 0 0% 4%;
+    --foreground: 0 0% 96%;
+    --muted: 0 0% 14%;
+    --muted-foreground: 0 0% 66%;
+    --brand: 0 100% 50%;
+    --brand-soft: 0 40% 10%;
+    --accent: 0 100% 50%;
+    --accent-foreground: 0 0% 96%;
+    --surface: 0 0% 8%;
+    --line: 0 0% 18%;
+    --danger: 0 100% 50%;
+    --primary-foreground: 0 0% 96%;
+    --primary-container: 0 80% 18%;
+    --secondary: 0 0% 14%;
+    --secondary-foreground: 0 0% 96%;
+    --secondary-container: 0 0% 18%;
+    --tertiary: 0 0% 66%;
+    --tertiary-foreground: 0 0% 4%;
+    --tertiary-container: 0 0% 18%;
+    --teal: 0 0% 66%;
+    --terracotta: 0 100% 50%;
+    --sunset: 0 0% 8%;
+    --body-wash: #0b0b0b;
+  }
+
+  [data-theme="light"] {
+    --void: #f5f5f5;
+    --raised: #ffffff;
+    --struct: #e6e6e6;
+    --line-hex: #d0d0d0;
+    --mute: #5c5c5c;
+    --glyph: #0b0b0b;
+    --led: #ff0000;
+    --led-dim: #c40000;
+    --dot-off: #cfcfcf;
+    --background: 0 0% 96%;
+    --foreground: 0 0% 4%;
+    --muted: 0 0% 90%;
+    --muted-foreground: 0 0% 36%;
+    --brand: 0 100% 50%;
+    --brand-soft: 0 40% 94%;
+    --accent: 0 100% 50%;
+    --accent-foreground: 0 0% 4%;
     --surface: 0 0% 100%;
-    --line: 150 14% 82%;
-    --danger: 0 72% 46%;
-    --body-wash:
-      radial-gradient(1200px 600px at 10% -10%, hsl(158 40% 88% / 0.9), transparent 55%),
-      radial-gradient(900px 500px at 100% 0%, hsl(38 80% 88% / 0.45), transparent 50%),
-      linear-gradient(180deg, hsl(150 25% 97%), hsl(150 18% 93%));
+    --line: 0 0% 82%;
+    --danger: 0 100% 42%;
+    --primary-foreground: 0 0% 100%;
+    --primary-container: 0 80% 94%;
+    --secondary: 0 0% 90%;
+    --secondary-foreground: 0 0% 4%;
+    --secondary-container: 0 0% 86%;
+    --tertiary: 0 0% 36%;
+    --tertiary-foreground: 0 0% 96%;
+    --tertiary-container: 0 0% 86%;
+    --teal: 0 0% 36%;
+    --terracotta: 0 100% 42%;
+    --sunset: 0 0% 96%;
+    --body-wash: #f5f5f5;
   }
 
   * {
@@ -30,8 +83,9 @@
   }
 
   body {
-    @apply min-h-screen text-foreground antialiased;
-    background: var(--body-wash);
+    @apply min-h-screen antialiased;
+    background: var(--void);
+    color: var(--glyph);
     font-family: var(--font-body), system-ui, sans-serif;
   }
 
@@ -40,11 +94,172 @@
   h3,
   .font-display {
     font-family: var(--font-display), system-ui, sans-serif;
+    letter-spacing: -0.04em;
+  }
+
+  code,
+  kbd,
+  .font-mono {
+    font-family: var(--font-mono), ui-monospace, monospace;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--led);
+    outline-offset: 3px;
+  }
+
+  ::selection {
+    background: var(--led);
+    color: #f5f5f5;
+  }
+}
+
+@layer components {
+  .led {
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    border-radius: 999px;
+    background: var(--dot-off);
+    flex-shrink: 0;
+    transition: background-color 160ms linear, transform 160ms linear;
+  }
+
+  .led-on {
+    background: var(--glyph);
+  }
+
+  .led-active {
+    background: var(--led);
+  }
+
+  .glyph-rail {
+    position: fixed;
+    left: 10px;
+    top: 0;
+    z-index: 60;
+    display: none;
+    height: 100vh;
+    width: 8px;
+    flex-direction: column;
+    align-items: center;
+    justify-content: space-evenly;
+    pointer-events: none;
+  }
+
+  @media (min-width: 768px) {
+    .glyph-rail {
+      display: flex;
+    }
+  }
+
+  .meta {
+    font-family: var(--font-mono), ui-monospace, monospace;
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--mute);
+  }
+
+  .module {
+    background: var(--raised);
+    border: 1px solid var(--line-hex);
+  }
+
+  .hw-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    border-radius: 2px;
+    border: 1px solid var(--struct);
+    background: var(--raised);
+    color: var(--glyph);
+    font-size: 13px;
+    font-weight: 600;
+    padding: 0.7rem 1.1rem;
+    transition: border-color 120ms linear, background-color 120ms linear, color 120ms linear;
+  }
+
+  .hw-btn:hover {
+    border-color: var(--glyph);
+  }
+
+  .hw-btn-primary {
+    background: var(--led);
+    border-color: var(--led);
+    color: #f5f5f5;
+  }
+
+  .hw-btn-primary:hover {
+    background: var(--led-dim);
+    border-color: var(--led-dim);
+  }
+
+  .panel-input {
+    width: 100%;
+    border: 0;
+    border-bottom: 1px solid var(--line-hex);
+    border-radius: 0;
+    background: transparent;
+    padding: 0.65rem 0;
+    color: var(--glyph);
+    outline: none;
+  }
+
+  .panel-input:focus {
+    border-bottom-color: var(--led);
+  }
+
+  .panel-input::placeholder {
+    color: var(--mute);
   }
 }
 
 @layer utilities {
   .surface {
-    @apply rounded-2xl border border-line bg-surface shadow-[0_12px_40px_-24px_rgba(15,61,46,0.45)];
+    background: var(--raised);
+    border: 1px solid var(--line-hex);
+    border-radius: 2px;
+  }
+}
+
+@keyframes led-blink {
+  0%,
+  100% {
+    background: var(--dot-off);
+  }
+  50% {
+    background: var(--led);
+  }
+}
+
+@keyframes led-seq {
+  0%,
+  80%,
+  100% {
+    background: var(--dot-off);
+  }
+  40% {
+    background: var(--glyph);
+  }
+}
+
+.led-busy {
+  animation: led-seq 1s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .led,
+  .led-busy,
+  .animate-rise,
+  .glyph-rail .led {
+    animation: none !important;
+    transition: none !important;
+  }
+
+  html {
+    scroll-behavior: auto;
   }
 }

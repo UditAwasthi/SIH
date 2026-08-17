@@ -3,6 +3,7 @@
 import { EXAMPLE_PROMPTS, type SupportedLanguage } from "@pgrkam-ai/shared";
 import { FormEvent, useEffect, useRef, useState } from "react";
 import { JobCard } from "@/components/job-card";
+import { DotLoader, Led } from "@/components/ui/dot-matrix";
 import { ApiError, ChatResponse, Job, NavigationCta, Recommendation, api, ensureGuest, setStoredToken } from "@/lib/api";
 import { useTheme } from "@/theme";
 
@@ -117,16 +118,19 @@ export function Chat({ initialPrompt }: { initialPrompt?: string }) {
     <section className={`${t.surface} animate-rise overflow-hidden`}>
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line px-4 py-3">
         <div>
-          <h2 className={t.titleSection}>Career chat</h2>
-          <p className="text-xs text-muted-foreground">
-            Grounded answers with citations · sign in to save your profile
+          <h2 className={`${t.titleSection} flex items-center gap-2`}>
+            <Led active={ready} busy={pending} />
+            Career chat
+          </h2>
+          <p className="mt-1 font-mono text-[10px] uppercase tracking-[0.12em] text-mute">
+            Grounded answers · sign in to save your profile
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2 text-xs">
-          <label className="flex items-center gap-2 rounded-full bg-muted px-3 py-1.5">
-            <span className="text-muted-foreground">Reply preference</span>
+          <label className="flex items-center gap-2 border border-line px-3 py-1.5">
+            <span className="text-mute">Reply preference</span>
             <select
-              className="bg-transparent font-semibold text-brand outline-none"
+              className="bg-transparent font-mono text-xs text-glyph outline-none"
               value={preferredLang}
               onChange={(event) => setPreferredLang(event.target.value as SupportedLanguage)}
             >
@@ -136,8 +140,8 @@ export function Chat({ initialPrompt }: { initialPrompt?: string }) {
             </select>
           </label>
           {detectedLang && (
-            <span className="rounded-full border border-line px-3 py-1.5 text-muted-foreground">
-              Detected: <strong className="text-brand">{languageLabel[detectedLang]}</strong>
+            <span className="border border-line px-3 py-1.5 font-mono text-[10px] uppercase tracking-[0.12em] text-mute">
+              Detected: <strong className="text-glyph">{languageLabel[detectedLang]}</strong>
             </span>
           )}
         </div>
@@ -169,7 +173,7 @@ export function Chat({ initialPrompt }: { initialPrompt?: string }) {
           >
             <p className="whitespace-pre-wrap text-sm leading-relaxed">{item.content}</p>
             {item.intent && item.role === "assistant" && (
-              <p className="text-[11px] uppercase tracking-wide text-muted-foreground">
+              <p className="font-mono text-[10px] uppercase tracking-[0.12em] text-mute">
                 Intent: {item.intent}
                 {item.language ? ` · ${languageLabel[item.language]}` : ""}
               </p>
@@ -207,7 +211,7 @@ export function Chat({ initialPrompt }: { initialPrompt?: string }) {
                 {item.sources.map((source) => (
                   <a
                     key={source.sourceUrl}
-                    className="rounded-full border border-line bg-surface px-2.5 py-1 text-[11px] text-brand underline-offset-2 hover:underline"
+                    className="border border-line bg-void px-2.5 py-1 font-mono text-[10px] uppercase tracking-[0.12em] text-mute hover:text-glyph"
                     href={source.sourceUrl}
                     target="_blank"
                     rel="noreferrer"
@@ -220,7 +224,7 @@ export function Chat({ initialPrompt }: { initialPrompt?: string }) {
           </article>
         ))}
 
-        {pending && <p className={t.loading}>Thinking… retrieving PGRKAM context</p>}
+        {pending && <p className={t.loading}><DotLoader label="Retrieving PGRKAM context" /></p>}
       </div>
 
       {error && <p className={`border-t border-line px-4 py-2 ${t.error}`}>{error}</p>}

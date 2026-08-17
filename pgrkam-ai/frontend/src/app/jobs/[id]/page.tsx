@@ -40,7 +40,7 @@ export default function JobDetailPage() {
 
   return (
     <main className={t.pageMedium}>
-      <Link href="/jobs" className="text-sm text-muted-foreground hover:text-brand">
+      <Link href="/jobs" className="font-mono text-[11px] uppercase tracking-[0.12em] text-mute hover:text-glyph">
         ← All jobs
       </Link>
       <article className={`${t.surface} mt-4 animate-rise p-6`}>

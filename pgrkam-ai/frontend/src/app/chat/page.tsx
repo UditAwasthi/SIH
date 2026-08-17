@@ -12,7 +12,7 @@ export default function ChatPage() {
       <section className="mb-8 max-w-3xl animate-rise">
         <p className={t.eyebrow}>Punjab employment copilot</p>
         <h1 className={`mt-2 ${t.titleHero}`}>Ask PGRKAM AI</h1>
-        <p className="mt-4 max-w-xl text-base text-muted-foreground md:text-lg">
+        <p className="mt-4 max-w-xl text-[15px] leading-6 text-mute md:text-base">
           Find jobs, verify schemes, and reach the right PGRKAM action — in English, Hindi, or
           Punjabi — with cited answers instead of guesses.
         </p>
