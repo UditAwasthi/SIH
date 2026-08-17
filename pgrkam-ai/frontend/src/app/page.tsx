@@ -75,7 +75,7 @@ export default function HomePage() {
               <p className="meta">Punjab / En Hi Pa</p>
               <p className="meta">{clock}</p>
             </div>
-            <p className="mt-8 font-display text-[clamp(3.5rem,11vw,8rem)] font-medium leading-[0.86] text-glyph">
+            <p className="mb-16 mt-16 font-display text-[clamp(3.5rem,11vw,8rem)] font-medium leading-[0.6] text-glyph">
               PGRKAM
             </p>
             <h1 className="mt-6 max-w-md text-[clamp(1.4rem,2.6vw,2rem)] font-medium leading-snug text-glyph">
@@ -101,27 +101,27 @@ export default function HomePage() {
             </div>
           </div>
 
-          <div className="relative md:col-span-5 md:col-start-8">
-            <div className="relative aspect-[4/5] overflow-hidden border border-line bg-raised md:mt-10">
-              <Image
-                src="/images/hero-illustration.jpeg"
-                alt="People across Punjab at work and in training, gathered under the PGRKAM mission"
-                fill
-                priority
-                className="object-cover object-center grayscale contrast-110"
-                sizes="(min-width: 768px) 40vw, 100vw"
-              />
-              <div className="absolute inset-0 bg-void/25" />
-              <div className="absolute left-3 top-3 flex items-center gap-2">
-                <Led active />
-                <span className="meta !text-glyph">Glyph / 01</span>
-              </div>
-              <div className="absolute bottom-3 left-3 right-3 flex justify-between">
-                <span className="meta">31.147 n</span>
-                <span className="meta">75.341 e</span>
-              </div>
-            </div>
-          </div>
+        {/*  <div className="relative md:col-span-5 md:col-start-8">*/}
+        {/*    <div className="relative aspect-[4/5] overflow-hidden border border-line bg-raised md:mt-10">*/}
+        {/*      <Image*/}
+        {/*        src="/images/hero-illustration.jpeg"*/}
+        {/*        alt="People across Punjab at work and in training, gathered under the PGRKAM mission"*/}
+        {/*        fill*/}
+        {/*        priority*/}
+        {/*        className="object-cover object-center grayscale contrast-110"*/}
+        {/*        sizes="(min-width: 768px) 30vw, 100vw"*/}
+        {/*      />*/}
+        {/*      <div className="absolute inset-0 bg-void/25" />*/}
+        {/*      <div className="absolute left-3 top-3 flex items-center gap-2">*/}
+        {/*        <Led active />*/}
+        {/*        <span className="meta !text-glyph">Glyph / 01</span>*/}
+        {/*      </div>*/}
+        {/*      <div className="absolute bottom-3 left-3 right-3 flex justify-between">*/}
+        {/*        <span className="meta">31.147 n</span>*/}
+        {/*        <span className="meta">75.341 e</span>*/}
+        {/*      </div>*/}
+        {/*    </div>*/}
+        {/*  </div>*/}
         </div>
       </header>
 
