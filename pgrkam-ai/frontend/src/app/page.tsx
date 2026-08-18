@@ -5,6 +5,7 @@ import Link from "next/link";
 import { FormEvent, useEffect, useState } from "react";
 import { useAuth } from "@/components/auth-provider";
 import { DotMatrix, Led } from "@/components/ui/dot-matrix";
+import { ApiError, subscribeToAlerts } from "@/lib/api";
 
 const paths = [
   {
@@ -52,6 +53,9 @@ const paths = [
 export default function HomePage() {
   const { isAuthenticated, loading } = useAuth();
   const [clock, setClock] = useState("00:00:00");
+  const [subscribeEmail, setSubscribeEmail] = useState("");
+  const [subscribeStatus, setSubscribeStatus] = useState<"idle" | "pending" | "success" | "error">("idle");
+  const [subscribeMessage, setSubscribeMessage] = useState<string | null>(null);
 
   useEffect(() => {
     const tick = () => setClock(new Date().toLocaleTimeString("en-GB", { hour12: false }));
@@ -60,9 +64,27 @@ export default function HomePage() {
     return () => window.clearInterval(id);
   }, []);
 
-  function onSubscribe(event: FormEvent<HTMLFormElement>) {
+  async function onSubscribe(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    window.alert("You’re on the list for new Punjab listings.");
+    const email = subscribeEmail.trim();
+    if (!email) return;
+
+    setSubscribeStatus("pending");
+    setSubscribeMessage(null);
+
+    try {
+      const result = await subscribeToAlerts(email);
+      setSubscribeStatus("success");
+      setSubscribeMessage(result.message);
+      setSubscribeEmail("");
+    } catch (err) {
+      setSubscribeStatus("error");
+      setSubscribeMessage(
+        err instanceof ApiError
+          ? err.message
+          : "Could not subscribe right now. Please try again.",
+      );
+    }
   }
 
   return (
@@ -233,13 +255,30 @@ export default function HomePage() {
                 id="subscribe-email"
                 required
                 type="email"
+                value={subscribeEmail}
+                onChange={(event) => setSubscribeEmail(event.target.value)}
                 placeholder="you@punjab.gov.in"
                 className="panel-input mt-2"
+                disabled={subscribeStatus === "pending"}
               />
             </label>
-            <button type="submit" className="hw-btn hw-btn-primary">
-              Subscribe
+            <button
+              type="submit"
+              className="hw-btn hw-btn-primary"
+              disabled={subscribeStatus === "pending" || !subscribeEmail.trim()}
+            >
+              {subscribeStatus === "pending" ? "Subscribing…" : "Subscribe"}
             </button>
+            {subscribeMessage && (
+              <p
+                className={`md:col-span-2 font-mono text-xs ${
+                  subscribeStatus === "error" ? "text-led" : "text-mute"
+                }`}
+                role="status"
+              >
+                {subscribeMessage}
+              </p>
+            )}
           </form>
         </div>
       </section>

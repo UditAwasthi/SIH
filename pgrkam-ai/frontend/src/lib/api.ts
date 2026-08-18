@@ -170,6 +170,13 @@ export type ChatResponse = {
   sources: Array<{ sourceUrl: string; lastCrawledAt?: string }>;
 };
 
+export async function subscribeToAlerts(email: string): Promise<{ ok: boolean; message: string }> {
+  return api<{ ok: boolean; message: string }>("/subscribe", {
+    method: "POST",
+    body: JSON.stringify({ email }),
+  });
+}
+
 export type Profile = {
   id: string;
   education?: unknown;

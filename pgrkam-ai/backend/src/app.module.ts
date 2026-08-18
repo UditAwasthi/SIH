@@ -15,6 +15,7 @@ import { NavigationModule } from "./navigation/navigation.module";
 import { PrismaModule } from "./prisma/prisma.module";
 import { RedisModule } from "./redis/redis.module";
 import { MailModule } from "./services/mail.module";
+import { SubscribeModule } from "./subscribe/subscribe.module";
 
 @Module({
   imports: [
@@ -35,6 +36,7 @@ import { MailModule } from "./services/mail.module";
     AiModule,
     KnowledgeModule,
     NavigationModule,
+    SubscribeModule,
   ],
 })
 export class AppModule {}
